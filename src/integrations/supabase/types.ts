@@ -867,6 +867,14 @@ export type Database = {
         Args: { _chat_id: string; _stale_seconds?: number }
         Returns: string
       }
+      devstudio_installed_version: {
+        Args: never
+        Returns: {
+          applied_at: string
+          name: string
+          version: string
+        }[]
+      }
       devstudio_schema_status: {
         Args: never
         Returns: {

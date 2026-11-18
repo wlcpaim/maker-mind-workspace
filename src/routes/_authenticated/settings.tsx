@@ -17,6 +17,9 @@ export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
 });
 
+// Tables locked to the server only: RLS on with no policies is intended.
+const SYSTEM_TABLES = new Set(["migration_history"]);
+
 function Settings() {
   const conns = useConnections();
   const qc = useQueryClient();
@@ -27,11 +30,11 @@ function Settings() {
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const schema = useQuery({ queryKey: ["schema"], queryFn: () => status() });
-  const migrations = useQuery({ queryKey: ["migrations"], queryFn: async () => (await supabase.from("migration_history").select("*").order("applied_at", { ascending: false })).data ?? [] });
+  const migrations = useQuery({ queryKey: ["migrations"], queryFn: async () => (await supabase.rpc("devstudio_installed_version")).data ?? [] });
   const gh = conns.data?.find((c) => c.provider === "github");
   const keys = conns.data?.filter((c) => c.provider === "gemini") ?? [];
   const rows = schema.data?.status ?? [];
-  const ok = rows.length > 0 && rows.every((r) => r.exists_flag && r.rls_enabled && r.policy_count > 0);
+  const ok = rows.length > 0 && rows.every((r) => r.exists_flag && r.rls_enabled && (r.policy_count > 0 || SYSTEM_TABLES.has(r.table_name)));
   async function run(k: string, fn: () => Promise<any>, msg: (r: any) => string) {
     setBusy(k);
     try { const r = await fn(); toast.success(msg(r)); qc.invalidateQueries({ queryKey: ["connections"] }); } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
@@ -45,7 +48,7 @@ function Settings() {
             <div className="flex items-center gap-2 text-sm">{ok ? <CheckCircle2 className="h-4 w-4 text-success" /> : <XCircle className="h-4 w-4 text-destructive" />}{ok ? `Instalado: ${rows.length} tabelas com proteção por usuário ativa` : schema.data?.error ?? "Estrutura incompleta"}</div>
             <div className="text-xs text-muted-foreground">Versão: {migrations.data?.[0]?.version ?? "—"} · {migrations.data?.[0]?.name ?? ""} · aplicada {fmt(migrations.data?.[0]?.applied_at)}</div>
             <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Ver tabelas</summary>
-              <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">{rows.map((r) => <div key={r.table_name} className="flex justify-between gap-2 rounded bg-muted/50 px-2 py-1 font-mono"><span className="truncate">{r.table_name}</span><span className={r.rls_enabled ? "text-success" : "text-destructive"}>{r.rls_enabled ? `RLS · ${r.policy_count}` : "sem RLS"}</span></div>)}</div>
+              <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">{rows.map((r) => <div key={r.table_name} className="flex justify-between gap-2 rounded bg-muted/50 px-2 py-1 font-mono"><span className="truncate">{r.table_name}</span><span className={r.rls_enabled ? "text-success" : "text-destructive"}>{r.rls_enabled ? (SYSTEM_TABLES.has(r.table_name) && r.policy_count === 0 ? "RLS · só servidor" : `RLS · ${r.policy_count}`) : "sem RLS"}</span></div>)}</div>
             </details>
           </>
         )}

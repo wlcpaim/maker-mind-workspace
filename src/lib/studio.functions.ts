@@ -86,7 +86,8 @@ export const runSystemTests = createServerFn({ method: "POST" })
       const { data, error } = await db.rpc("devstudio_schema_status");
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as { table_name: string; exists_flag: boolean; rls_enabled: boolean; policy_count: number }[];
-      const bad = rows.filter((r) => !r.exists_flag || !r.rls_enabled || r.policy_count === 0);
+      const systemTables = new Set(["migration_history"]); // RLS on, no policies: server-only by design
+      const bad = rows.filter((r) => !r.exists_flag || !r.rls_enabled || (r.policy_count === 0 && !systemTables.has(r.table_name)));
       if (rows.length < 16) throw new Error(`Apenas ${rows.length} de 16 tabelas encontradas`);
       if (bad.length) throw new Error(`Sem proteção: ${bad.map((r) => r.table_name).join(", ")}`);
       return `${rows.length} tabelas presentes, todas com RLS e políticas`;
