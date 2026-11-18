@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { decryptSecret, encryptSecret, redactSecrets, secretHint } from "./crypto.server";
 import { listGeminiModels, pingGemini } from "./ai.server";
 import { getAuthenticatedUser } from "./github.server";
+import { DEFAULT_GEMINI_MODEL } from "./models";
 
 async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -58,7 +59,7 @@ export const updateGeminiKey = createServerFn({ method: "POST" })
     const db = await admin();
     const patch: any = {};
     if (data.name !== undefined) patch.name = data.name;
-    if (data.model !== undefined) patch.model = data.model;
+    if (data.model !== undefined) Object.assign(patch, { model: data.model.replace(/^models\//, ""), status: "untested", last_error: null, quota_exceeded_at: null });
     if (data.googleProject !== undefined) patch.google_project = data.googleProject || null;
     if (data.isActive !== undefined) patch.is_active = data.isActive;
     const { error } = await db.from("api_connections").update(patch).eq("id", data.id).eq("user_id", context.userId);
@@ -109,7 +110,7 @@ export const testGeminiKey = createServerFn({ method: "POST" })
     } catch (e) {
       modelsError = redactSecrets((e as Error).message);
     }
-    const ping = await pingGemini(key, row.model ?? "gemini-2.5-flash");
+    const ping = await pingGemini(key, row.model ?? DEFAULT_GEMINI_MODEL);
     const now = new Date().toISOString();
     const status = ping.ok ? "ok" : ping.kind === "quota" ? "quota_exceeded" : ping.kind === "invalid" ? "invalid" : "error";
     await db

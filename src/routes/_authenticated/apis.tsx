@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Star, Trash2, Loader2, Zap } from "lucide-react";
+import { Plus, Star, Trash2, Loader2, Zap, Pencil } from "lucide-react";
+import { DEFAULT_GEMINI_MODEL } from "@/lib/models";
 import { toast } from "sonner";
 import { addGeminiKey, deleteConnection, setPrimaryKey, testGeminiKey, updateGeminiKey } from "@/lib/connections.functions";
 import { useConnections } from "@/lib/data";
@@ -29,7 +30,8 @@ function Apis() {
   const upd = useServerFn(updateGeminiKey);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [f, setF] = useState({ name: "", apiKey: "", model: "gemini-2.5-flash", googleProject: "", setPrimary: false });
+  const [f, setF] = useState({ name: "", apiKey: "", model: DEFAULT_GEMINI_MODEL, googleProject: "", setPrimary: false });
+  const [edit, setEdit] = useState<{ id: string; name: string; model: string; googleProject: string; models: string[] } | null>(null);
   const keys = data?.filter((c) => c.provider === "gemini") ?? [];
   const refresh = () => qc.invalidateQueries({ queryKey: ["connections"] });
   async function run(key: string, fn: () => Promise<any>, ok?: (r: any) => string) {
@@ -54,6 +56,7 @@ function Apis() {
               <label className="flex items-center justify-between text-sm">Ativa <Switch checked={k.is_active} onCheckedChange={(v) => run(k.id + "a", () => upd({ data: { id: k.id, isActive: v } }))} /></label>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" disabled={busy === k.id + "t"} onClick={() => run(k.id + "t", () => test({ data: { id: k.id } }), (r) => r.ok ? `OK · ${r.models} modelos disponíveis` : `Falhou: ${r.error}`)}>{busy === k.id + "t" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />} Testar</Button>
+                <Button size="sm" variant="outline" onClick={() => setEdit({ id: k.id, name: k.name, model: k.model ?? DEFAULT_GEMINI_MODEL, googleProject: k.google_project ?? "", models: ((k.metadata as { models?: string[] } | null)?.models ?? []) })}><Pencil className="h-4 w-4" /> Editar</Button>
                 {!k.is_primary && <Button size="sm" variant="outline" onClick={() => run(k.id + "p", () => prim({ data: { id: k.id } }), () => "Agora é a principal")}><Star className="h-4 w-4" /> Tornar principal</Button>}
                 <AlertDialog>
                   <AlertDialogTrigger asChild><Button size="sm" variant="ghost" aria-label="Remover"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
@@ -78,6 +81,19 @@ function Apis() {
             <label className="flex items-center justify-between text-sm">Definir como principal <Switch checked={f.setPrimary} onCheckedChange={(v) => setF({ ...f, setPrimary: v })} /></label>
           </div>
           <DialogFooter><Button disabled={!f.name || f.apiKey.length < 20 || busy === "add"} onClick={async () => { const r = await run("add", () => add({ data: f }), () => "Chave salva"); if (r) { setOpen(false); setF({ ...f, name: "", apiKey: "" }); } }}>{busy === "add" && <Loader2 className="h-4 w-4 animate-spin" />} Salvar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar chave</DialogTitle><DialogDescription>A chave em si não muda. Depois de salvar, clique em Testar.</DialogDescription></DialogHeader>
+          {edit && <div className="space-y-3">
+            <div className="space-y-1"><Label>Nome</Label><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Modelo</Label><Input list="edit-models" value={edit.model} onChange={(e) => setEdit({ ...edit, model: e.target.value })} />
+              <datalist id="edit-models">{edit.models.map((m) => <option key={m} value={m} />)}</datalist>
+              {edit.models.length > 0 && <div className="flex flex-wrap gap-1 pt-1">{edit.models.filter((m) => /^gemini-[\d.]+-(flash|pro)(-lite)?$/.test(m)).slice(-6).map((m) => <button key={m} type="button" onClick={() => setEdit({ ...edit, model: m })} className={`rounded border px-2 py-1 font-mono text-xs ${edit.model === m ? "border-primary text-primary" : "text-muted-foreground"}`}>{m}</button>)}</div>}</div>
+            <div className="space-y-1"><Label>Projeto Google (opcional)</Label><Input value={edit.googleProject} onChange={(e) => setEdit({ ...edit, googleProject: e.target.value })} /></div>
+          </div>}
+          <DialogFooter><Button disabled={!edit?.name.trim() || !edit?.model.trim() || busy === "edit"} onClick={async () => { if (!edit) return; const r = await run("edit", () => upd({ data: { id: edit.id, name: edit.name, model: edit.model, googleProject: edit.googleProject } }), () => "Chave atualizada"); if (r) setEdit(null); }}>{busy === "edit" && <Loader2 className="h-4 w-4 animate-spin" />} Salvar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </Page>

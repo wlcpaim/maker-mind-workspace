@@ -1,3 +1,4 @@
+import { DEFAULT_GEMINI_MODEL } from "@/lib/models";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -50,7 +51,7 @@ function NewChat() {
     const repo = repos.data?.find((r) => r.id === repoId);
     const { data, error } = await supabase.from("chats").insert({
       user_id: u.user!.id, project_id: projectId, repository_id: repo?.id ?? null, branch: repo?.default_branch ?? null,
-      model: model === "auto" ? (keys.find((k) => k.is_primary)?.model ?? "gemini-2.5-flash") : model, title: title.trim() || "Novo chat",
+      model: model === "auto" ? (keys.find((k) => k.is_primary)?.model ?? DEFAULT_GEMINI_MODEL) : model, title: title.trim() || "Novo chat",
     }).select("id").single();
     setBusy(false);
     if (error) return toast.error(error.message);

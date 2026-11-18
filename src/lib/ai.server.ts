@@ -38,7 +38,7 @@ function classifyGemini(status: number, body: string): AIErrorKind {
   if (status === 429 || /RESOURCE_EXHAUSTED|quota|rate limit/i.test(body)) return "quota";
   if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|unregistered callers/i.test(body) || status === 401 || status === 403)
     return "invalid";
-  if (status === 404 || /model.*not found|is not found|not supported/i.test(body)) return "model";
+  if (status === 404 || /model.*not found|is not found|not supported|no longer available/i.test(body)) return "model";
   return "other";
 }
 
