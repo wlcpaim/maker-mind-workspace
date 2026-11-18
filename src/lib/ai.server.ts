@@ -18,7 +18,7 @@ export type ToolDef = {
   function: { name: string; description: string; parameters: Record<string, unknown> };
 };
 
-export type AIErrorKind = "quota" | "invalid" | "model" | "credits" | "network" | "other";
+export type AIErrorKind = "quota" | "invalid" | "model" | "busy" | "credits" | "network" | "other";
 
 export class AIError extends Error {
   kind: AIErrorKind;
@@ -39,6 +39,7 @@ function classifyGemini(status: number, body: string): AIErrorKind {
   if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|unregistered callers/i.test(body) || status === 401 || status === 403)
     return "invalid";
   if (status === 404 || /model.*not found|is not found|not supported|no longer available/i.test(body)) return "model";
+  if (status === 503 || status === 500 || /UNAVAILABLE|overloaded|high demand/i.test(body)) return "busy";
   return "other";
 }
 
@@ -59,15 +60,29 @@ export async function callGemini(
   tools?: ToolDef[],
   maxTokens?: number,
 ): Promise<CompletionResult> {
-  const res = await post(GEMINI_OPENAI, { Authorization: `Bearer ${apiKey}` }, {
+  const body = {
     model: model.replace(/^models\//, ""),
     messages,
     ...(tools?.length ? { tools, tool_choice: "auto" } : {}),
     ...(maxTokens ? { max_tokens: maxTokens } : {}),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new AIError(classifyGemini(res.status, text), res.status, redactSecrets(`Gemini ${res.status}: ${text.slice(0, 600)}`));
+  };
+  // Google returns temporary 503 "high demand" spikes; retry a couple of times before giving up.
+  const waits = [1500, 4000];
+  let res: Response;
+  let text: string;
+  for (let i = 0; ; i++) {
+    res = await post(GEMINI_OPENAI, { Authorization: `Bearer ${apiKey}` }, body);
+    text = await res.text();
+    if (res.ok) break;
+    const kind = classifyGemini(res.status, text);
+    if (kind === "busy" && i < waits.length) {
+      await new Promise((r) => setTimeout(r, waits[i]));
+      continue;
+    }
+    const msg = kind === "busy"
+      ? `Google sobrecarregado no modelo ${body.model} (HTTP ${res.status}, temporário). A chave está válida; tente de novo em alguns minutos ou use outro modelo.`
+      : `Gemini ${res.status}: ${text.slice(0, 600)}`;
+    throw new AIError(kind, res.status, redactSecrets(msg));
   }
   const json = JSON.parse(text) as { choices?: { message: CompletionResult["message"] }[]; usage?: unknown };
   const message = json.choices?.[0]?.message;

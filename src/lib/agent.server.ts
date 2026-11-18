@@ -377,6 +377,16 @@ export async function runAgent(
             }
             continue;
           }
+          if (provider.kind === "gemini" && e.kind === "busy") {
+            await markKey(provider.key.id, { last_error: e.message });
+            rotations.push(`Google sobrecarregado na chave "${provider.key.name}" (HTTP ${e.status}) — tentando a próxima opção`);
+            provider = await nextProvider(true);
+            if (!provider) {
+              const cp = await saveCheckpoint("error", e.message);
+              throw new PausedError("O Google está sobrecarregado e não há outra opção disponível agora.", cp);
+            }
+            continue;
+          }
           if (provider.kind === "gemini" && e.kind === "model") {
             throw new Error(`O modelo "${chat.model}" não está disponível para a chave "${provider.key.name}". Escolha outro modelo no chat.`);
           }
