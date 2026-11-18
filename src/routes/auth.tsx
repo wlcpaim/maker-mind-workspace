@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Terminal, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,22 +29,52 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => { if (data.user) nav({ to: "/dashboard", replace: true }); });
+    const { data } = supabase.auth.onAuthStateChange((ev, session) => {
+      if (ev === "SIGNED_IN" && session) nav({ to: "/dashboard", replace: true });
+    });
+    return () => data.subscription.unsubscribe();
+  }, [nav]);
+
+  function translate(err: any): string {
+    const code = err?.code ?? "";
+    const msg = String(err?.message ?? err);
+    if (code === "email_not_confirmed" || /not confirmed/i.test(msg)) return "Seu email ainda não foi confirmado. Abra o link enviado (veja também o spam) ou reenvie abaixo.";
+    if (code === "invalid_credentials" || /Invalid login/i.test(msg)) return "Email ou senha incorretos. Se você criou a conta com Google, use \"Continuar com Google\".";
+    if (code === "user_already_exists" || /already registered/i.test(msg)) return "Este email já tem conta. Use Entrar.";
+    if (/not allowed|Placeholder/i.test(msg)) return "Este endereço de email não é aceito. Use um email real.";
+    if (code === "weak_password" || /password/i.test(msg) && /weak|short|pwned/i.test(msg)) return "Senha fraca ou já vazada. Escolha outra mais forte.";
+    if (/rate limit/i.test(msg)) return "Muitas tentativas. Aguarde alguns minutos.";
+    return msg;
+  }
+
+  async function resend() {
+    if (!pending) return;
+    const { error } = await supabase.auth.resend({ type: "signup", email: pending, options: { emailRedirectTo: `${window.location.origin}/auth` } });
+    if (error) toast.error(translate(error)); else toast.success("Novo link de confirmação enviado.");
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
       if (mode === "in") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (error) { if ((error as any).code === "email_not_confirmed") setPending(email.trim()); throw error; }
         nav({ to: "/dashboard", replace: true });
       } else {
-        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/dashboard` } });
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/auth` } });
         if (error) throw error;
+        if (data.session) { nav({ to: "/dashboard", replace: true }); return; }
+        if (data.user && (data.user.identities?.length ?? 0) === 0) throw new Error("Este email já tem conta. Use Entrar (ou Google, se foi assim que você criou).");
+        setPending(email.trim());
         toast.success("Conta criada. Confirme pelo link enviado ao seu email.");
       }
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(translate(err));
     } finally {
       setBusy(false);
     }
@@ -52,7 +82,7 @@ function AuthPage() {
 
   async function oauth(p: "google" | "lovable") {
     const r = await lovable.auth.signInWithOAuth(p as any, { redirect_uri: window.location.origin + "/auth" });
-    if ((r as any).error) toast.error(String((r as any).error.message ?? (r as any).error));
+    if ((r as any).error) toast.error(translate((r as any).error));
     else if (!(r as any).redirected) nav({ to: "/dashboard", replace: true });
   }
 
@@ -68,6 +98,12 @@ function AuthPage() {
           <div className="space-y-2"><Label htmlFor="pw">Senha</Label><Input id="pw" type="password" autoComplete={mode === "in" ? "current-password" : "new-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} className="h-11" /></div>
           <Button type="submit" className="h-11 w-full" disabled={busy}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "in" ? "Entrar" : "Criar conta"}</Button>
         </form>
+        {pending && (
+          <div className="rounded-md border bg-card p-3 text-sm text-muted-foreground">
+            Enviamos um link para <span className="text-foreground">{pending}</span>. Confirme para entrar.
+            <Button variant="link" className="h-auto p-0 pl-1" onClick={resend}>Reenviar link</Button>
+          </div>
+        )}
         <div className="grid gap-2">
           <Button variant="outline" className="h-11" onClick={() => oauth("google")}>Continuar com Google</Button>
           <Button variant="outline" className="h-11" onClick={() => oauth("lovable")}>Continuar com Lovable</Button>
