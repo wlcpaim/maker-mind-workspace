@@ -10,33 +10,118 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
+import { Route as AuthenticatedReposRouteImport } from './routes/_authenticated/repos'
+import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat.index'
+import { Route as AuthenticatedChatIdRouteImport } from './routes/_authenticated/chat.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReposRoute = AuthenticatedReposRouteImport.update({
+  id: '/repos',
+  path: '/repos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatIndexRoute = AuthenticatedChatIndexRouteImport.update({
+  id: '/chat/',
+  path: '/chat/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatIdRoute = AuthenticatedChatIdRouteImport.update({
+  id: '/chat/$id',
+  path: '/chat/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/projects': typeof AuthenticatedProjectsRoute
+  '/repos': typeof AuthenticatedReposRoute
+  '/chat/$id': typeof AuthenticatedChatIdRoute
+  '/chat/': typeof AuthenticatedChatIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/projects': typeof AuthenticatedProjectsRoute
+  '/repos': typeof AuthenticatedReposRoute
+  '/chat/$id': typeof AuthenticatedChatIdRoute
+  '/chat': typeof AuthenticatedChatIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/projects': typeof AuthenticatedProjectsRoute
+  '/_authenticated/repos': typeof AuthenticatedReposRoute
+  '/_authenticated/chat/$id': typeof AuthenticatedChatIdRoute
+  '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/projects'
+    | '/repos'
+    | '/chat/$id'
+    | '/chat/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/projects'
+    | '/repos'
+    | '/chat/$id'
+    | '/chat'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/projects'
+    | '/_authenticated/repos'
+    | '/_authenticated/chat/$id'
+    | '/_authenticated/chat/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +133,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/repos': {
+      id: '/_authenticated/repos'
+      path: '/repos'
+      fullPath: '/repos'
+      preLoaderRoute: typeof AuthenticatedReposRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat/': {
+      id: '/_authenticated/chat/'
+      path: '/chat'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof AuthenticatedChatIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat/$id': {
+      id: '/_authenticated/chat/$id'
+      path: '/chat/$id'
+      fullPath: '/chat/$id'
+      preLoaderRoute: typeof AuthenticatedChatIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
+  AuthenticatedReposRoute: typeof AuthenticatedReposRoute
+  AuthenticatedChatIdRoute: typeof AuthenticatedChatIdRoute
+  AuthenticatedChatIndexRoute: typeof AuthenticatedChatIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
+  AuthenticatedReposRoute: AuthenticatedReposRoute,
+  AuthenticatedChatIdRoute: AuthenticatedChatIdRoute,
+  AuthenticatedChatIndexRoute: AuthenticatedChatIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -56,7 +56,7 @@ export const updateGeminiKey = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const db = await admin();
-    const patch: Record<string, unknown> = {};
+    const patch: any = {};
     if (data.name !== undefined) patch.name = data.name;
     if (data.model !== undefined) patch.model = data.model;
     if (data.googleProject !== undefined) patch.google_project = data.googleProject || null;

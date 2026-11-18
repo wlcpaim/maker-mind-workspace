@@ -215,3 +215,14 @@
   border: 1px solid var(--color-border);
   padding: 0.3rem 0.5rem;
 }
+
+.prose-studio p { margin: 0.5em 0; }
+.prose-studio ul { list-style: disc; padding-left: 1.25rem; }
+.prose-studio ol { list-style: decimal; padding-left: 1.25rem; }
+.prose-studio code { font-family: var(--font-mono); font-size: 0.85em; background: var(--muted); padding: 0.1em 0.3em; border-radius: 4px; }
+.prose-studio pre { background: var(--muted); padding: 0.75rem; border-radius: 6px; overflow-x: auto; max-width: 100%; }
+.prose-studio pre code { background: transparent; padding: 0; }
+.prose-studio h1, .prose-studio h2, .prose-studio h3 { font-weight: 600; margin: 0.8em 0 0.4em; }
+.prose-studio table { display: block; overflow-x: auto; border-collapse: collapse; }
+.prose-studio td, .prose-studio th { border: 1px solid var(--border); padding: 0.25rem 0.5rem; }
+.prose-studio a { color: var(--primary); }
