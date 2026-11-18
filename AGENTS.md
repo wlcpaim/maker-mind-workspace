@@ -28,3 +28,9 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+<!-- AGENT-MEMORY:BEGIN -->
+- Browser reads go through the RLS-scoped supabase client; anything touching secrets, GitHub or the agent goes through `src/lib/*.functions.ts` server functions with requireSupabaseAuth — keys never reach the client.
+- Agent runs use the caller's `context.supabase` (not admin) because the agent lock RPC relies on auth.uid().
+- tsconfig has noPropertyAccessFromIndexSignature, exactOptionalPropertyTypes and noImplicitReturns off — they blocked the existing server code without adding safety here.
+<!-- AGENT-MEMORY:END -->

@@ -85,7 +85,11 @@ export const runSystemTests = createServerFn({ method: "POST" })
     await t("Instalação", "Estrutura do banco", async () => {
       const { data, error } = await db.rpc("devstudio_schema_status");
       if (error) throw new Error(error.message);
-      return JSON.stringify(data).slice(0, 300);
+      const rows = (data ?? []) as { table_name: string; exists_flag: boolean; rls_enabled: boolean; policy_count: number }[];
+      const bad = rows.filter((r) => !r.exists_flag || !r.rls_enabled || r.policy_count === 0);
+      if (rows.length < 16) throw new Error(`Apenas ${rows.length} de 16 tabelas encontradas`);
+      if (bad.length) throw new Error(`Sem proteção: ${bad.map((r) => r.table_name).join(", ")}`);
+      return `${rows.length} tabelas presentes, todas com RLS e políticas`;
     });
     await t("Autenticação", "Sessão válida no servidor", async () => `Usuário ${uid.slice(0, 8)}… autenticado`);
     await t("Isolamento", "Sem acesso a dados de outros usuários", async () => {

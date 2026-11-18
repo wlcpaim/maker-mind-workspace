@@ -61,7 +61,7 @@ function NewChat() {
   if (!projects.data?.length) return <Page title="Novo chat"><Empty>Crie um projeto primeiro em Projetos.</Empty></Page>;
   return (
     <Page title="Novo chat" desc="O agente recebe histórico, memória, auditorias, tarefas e o estado real do GitHub.">
-      <div className="grid max-w-2xl gap-4 rounded-lg border bg-card p-4 sm:p-5">
+      <div className="grid max-w-2xl grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:p-5 [&>*]:min-w-0">
         <div className="space-y-2"><Label>Projeto</Label>
           <Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="h-11"><SelectValue placeholder="Escolha um projeto" /></SelectTrigger>
             <SelectContent>{projects.data.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
@@ -71,7 +71,8 @@ function NewChat() {
           {projectId && !projRepos.length && <p className="text-xs text-muted-foreground">Nenhum repositório vinculado a este projeto (vincule em Repositórios).</p>}</div>
         <div className="space-y-2"><Label>Modelo</Label>
           <Select value={model} onValueChange={setModel}><SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="auto">Automático (chave principal → reservas → Gemini embutido)</SelectItem>{models.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
+            <SelectContent><SelectItem value="auto">Automático</SelectItem>{models.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select>
+          <p className="text-xs text-muted-foreground">Automático: chave principal → reservas → Gemini embutido.</p></div>
         <div className="space-y-2"><Label>Título (opcional)</Label><Input className="h-11" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} /></div>
         {ctx.data && <div className="grid grid-cols-3 gap-2 text-center text-xs sm:grid-cols-5">
           {[["Chats", ctx.data.chats], ["Memórias", ctx.data.memory], ["Tarefas abertas", ctx.data.tasks], ["Auditorias", ctx.data.audits], ["Checkpoints", ctx.data.cps]].map(([l, v]) => (
