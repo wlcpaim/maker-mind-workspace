@@ -58,8 +58,9 @@ export const schemaStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.rpc("devstudio_schema_status");
-    if (error) return { ok: false, error: error.message, status: null as unknown };
-    return { ok: true, error: null, status: data as unknown };
+    type Row = { table_name: string; exists_flag: boolean; rls_enabled: boolean; policy_count: number };
+    if (error) return { ok: false, error: error.message as string | null, status: [] as Row[] };
+    return { ok: true, error: null as string | null, status: (data ?? []) as Row[] };
   });
 
 type T = { suite: string; test_name: string; status: "passed" | "failed" | "skipped"; details: string; duration_ms: number };
